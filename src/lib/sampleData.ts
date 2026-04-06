@@ -1,6 +1,12 @@
 import { nanoid } from 'nanoid'
 import type { BoardCards, BoardColumns, Card } from '@/types'
 
+/**
+ * Internal helper to build a full Card from a partial definition.
+ * Auto-fills id, links, notes, createdAt, and completedAt (set for completed columns).
+ * @param partial - Card fields excluding the auto-generated ones.
+ * @returns A complete Card object ready to be added to the store.
+ */
 function card(partial: Omit<Card, 'id' | 'createdAt' | 'completedAt' | 'links' | 'notes'>): Card {
   return {
     ...partial,
@@ -14,6 +20,12 @@ function card(partial: Omit<Card, 'id' | 'createdAt' | 'completedAt' | 'links' |
   }
 }
 
+/**
+ * Builds a set of sample cards and columns to seed the board on first load.
+ * Only called once by the Zustand store's initialize() action when no persisted
+ * data exists in localStorage.
+ * @returns An object containing normalised cards and columns ready for the store.
+ */
 export function buildSampleData(): { cards: BoardCards; columns: BoardColumns } {
   const sampleCards: Card[] = [
     card({ title: 'AI-powered code review tool', description: 'Use an LLM to review PRs and suggest improvements inline. Could be a GitHub Action or CLI.', tags: ['CLI Tool', 'ML / AI'], priority: 'high', category: 'DevTool', columnId: 'ideas' }),

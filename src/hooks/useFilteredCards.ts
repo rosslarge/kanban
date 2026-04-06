@@ -3,6 +3,14 @@ import { useBoardStore } from '@/store/boardStore'
 import { useFilterStore } from '@/store/filterStore'
 import type { Card, ColumnId } from '@/types'
 
+/**
+ * Returns the visible cards for a given column, applying all active filters.
+ * Filters text across title, description, tags, and category (case-insensitive).
+ * Tag and priority filters are OR-matched within their respective sets.
+ * Memoised on the card list, column order, and filter values to avoid redundant work.
+ * @param columnId - The column whose cards should be filtered and returned.
+ * @returns The ordered, filtered array of cards for that column.
+ */
 export function useFilteredCards(columnId: ColumnId): Card[] {
   const cards = useBoardStore((s) => s.cards)
   const columnCardIds = useBoardStore((s) => s.columns[columnId].cardIds)
@@ -38,6 +46,11 @@ export function useFilteredCards(columnId: ColumnId): Card[] {
   }, [columnCardIds, cards, searchQuery, activeTags, activePriorities])
 }
 
+/**
+ * Returns a sorted, deduplicated list of all tags currently on the board.
+ * Used to populate the tag filter in the sidebar.
+ * Memoised on the full cards map.
+ */
 export function useAllTags(): string[] {
   const cards = useBoardStore((s) => s.cards)
   return useMemo(() => {

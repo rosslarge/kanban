@@ -5,14 +5,24 @@ import type { Card, BoardCards, BoardColumns, ColumnId, Priority, CardLink } fro
 import { buildSampleData } from '@/lib/sampleData'
 import { COMPLETED_COLUMNS } from '@/lib/constants'
 
+/** The persisted board data: all cards normalised by ID and columns with their ordered card ID arrays. */
 interface BoardState {
   cards: BoardCards
   columns: BoardColumns
+  /** True once sample data has been seeded, preventing re-seeding on subsequent loads. */
   initialized: boolean
 }
 
+/** All mutating actions available on the board store. */
 interface BoardActions {
+  /** Seeds the store with sample data on first load. No-op if already initialized. */
   initialize: () => void
+
+  /**
+   * Creates a new card and appends it to the end of the specified column.
+   * Auto-generates the ID and timestamps.
+   * @returns The new card's ID.
+   */
   addCard: (data: {
     title: string
     description: string
@@ -23,14 +33,45 @@ interface BoardActions {
     notes: string
     columnId: ColumnId
   }) => string
+
+  /**
+   * Applies partial updates to an existing card.
+   * @param id - The ID of the card to update.
+   * @param updates - The fields to overwrite.
+   */
   updateCard: (id: string, updates: Partial<Omit<Card, 'id' | 'createdAt'>>) => void
+
+  /**
+   * Removes a card from the store and its column.
+   * @param id - The ID of the card to delete.
+   */
   deleteCard: (id: string) => void
+
+  /**
+   * Moves a card to a different column at a specific index.
+   * Handles cross-column moves and sets completedAt when moving to a completed column.
+   * @param cardId - The ID of the card to move.
+   * @param toColumnId - The destination column.
+   * @param toIndex - The zero-based insertion index in the destination column.
+   */
   moveCard: (cardId: string, toColumnId: ColumnId, toIndex: number) => void
+
+  /**
+   * Reorders a card within its current column.
+   * @param columnId - The column containing the card.
+   * @param fromIndex - The card's current index.
+   * @param toIndex - The desired index after the move.
+   */
   reorderCard: (columnId: ColumnId, fromIndex: number, toIndex: number) => void
 }
 
 const { cards: sampleCards, columns: sampleColumns } = buildSampleData()
 
+/**
+ * The primary Zustand store for all board state.
+ * Persists to localStorage under the key "kanban-board-v1" so the board
+ * survives page refreshes. Will be replaced by API calls once the backend is integrated.
+ */
 export const useBoardStore = create<BoardState & BoardActions>()(
   persist(
     (set, get) => ({

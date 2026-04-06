@@ -86,6 +86,12 @@ export const TAG_PALETTE = [
   'bg-indigo-100 text-indigo-700',
 ]
 
+/**
+ * Returns a deterministic Tailwind background+text class pair for a given tag string.
+ * The same tag always receives the same colour across renders by hashing the tag name.
+ * @param tag - The tag string to colourise.
+ * @returns A Tailwind class string, e.g. "bg-blue-100 text-blue-700".
+ */
 export function tagColor(tag: string): string {
   let hash = 0
   for (let i = 0; i < tag.length; i++) {
