@@ -19,6 +19,18 @@ builder.Services.AddSingleton(_ =>
             PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
         }
     };
+
+    // The local Cosmos emulator uses a self-signed certificate, so bypass SSL
+    // validation in Development. Never disable this in production.
+    if (builder.Environment.IsDevelopment())
+    {
+        options.HttpClientFactory = () => new HttpClient(new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        });
+        options.ConnectionMode = ConnectionMode.Gateway;
+    }
+
     return new CosmosClient(cosmosConfig.ConnectionString, options);
 });
 

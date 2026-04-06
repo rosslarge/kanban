@@ -241,6 +241,165 @@ dotnet test
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
+## Phase 6: Full-Stack Integration Tests
+
+### Context
+The existing endpoint tests mock `ICardService`, so they only verify HTTP routing and serialization. These integration tests make real HTTP requests through the **full pipeline** (HTTP → endpoints → `CardService` → repository) without requiring the Cosmos DB emulator.
+
+### Approach
+Replace the data layer with an `InMemoryCardRepository` implementing `ICardRepository`, backed by a `ConcurrentDictionary`. This exercises the real `CardService` business logic (position management, `CompletedAt` stamping, etc.) while staying emulator-free. No new NuGet packages needed.
+
+### New Files
+
+#### `tests/api/Helpers/InMemoryCardRepository.cs`
+Implements `ICardRepository` with a `ConcurrentDictionary<string, Card>`:
+- `GetByUserAsync` — filter by `UserId` + optional `ColumnId`, order by `Position`
+- `GetByIdAsync` — lookup by id, return null if missing or wrong userId
+- `CreateAsync` / `UpdateAsync` — store and return a **deep copy** (JSON round-trip) to match Cosmos behaviour of returning a deserialized server copy
+- `DeleteAsync` — remove from dictionary
+- `Clear()` method for test isolation between tests
+
+#### `tests/api/Helpers/KanbanApiFixture.cs`
+`WebApplicationFactory<Program>` subclass:
+- Removes `CosmosClient`, `Container`, `ICardRepository`, `ICardService` registrations (same pattern as existing endpoint tests)
+- Registers `InMemoryCardRepository` as singleton for both concrete type and `ICardRepository`
+- Registers real `CardService` as `ICardService`
+- Injects dummy `CosmosDb` config via `ConfigureAppConfiguration` so `Program.cs` startup doesn't throw
+- Exposes `Repository` property and `CreateClientForUser(userId)` helper
+
+#### `tests/api/Integration/CardLifecycleTests.cs`
+Multi-step CRUD workflows proving data flows through the full stack:
+- Create → Get by ID returns the created card with all fields
+- Create → Get all cards includes it
+- Create → Update title → Get confirms change
+- Create → Delete → Get returns 404
+- Create with all fields (tags, links, priority, notes) round-trips correctly
+- Update with `columnId` change triggers a move
+
+#### `tests/api/Integration/PositionManagementTests.cs`
+Proves `CardService` position logic works end-to-end via HTTP:
+- Create 3 cards → positions are 0, 1, 2
+- Move card within column → reorders and renormalises
+- Move card across columns → renormalises both source and destination
+- Delete middle card → renormalises remaining
+- Move to position beyond end → clamps correctly
+
+#### `tests/api/Integration/BoardWorkflowTests.cs`
+Board aggregate endpoint tests:
+- Empty board returns all 5 columns
+- Cards in multiple columns appear correctly in board response
+- Move to "shipped" → `completedAt` is set in board view
+- Full lifecycle: ideas → planned → in-progress → shipped → retrospective
+
+#### `tests/api/Integration/UserIsolationTests.cs`
+Multi-user isolation through the full stack:
+- Two users each see only their own cards
+- User cannot GET/DELETE another user's card (returns 404)
+- Board endpoint scoped to current user
+- No `X-User-Id` header defaults to "dev-user"
+
+### Updated Test Structure
+```
+tests/api/
+├── Helpers/
+│   ├── CardTestFactory.cs              (existing)
+│   ├── CosmosContainerMockBuilder.cs   (existing)
+│   ├── InMemoryCardRepository.cs       (NEW)
+│   └── KanbanApiFixture.cs             (NEW)
+├── Services/                           (existing unit tests)
+├── Endpoints/                          (existing mock-based integration tests)
+└── Integration/                        (NEW — full-stack integration tests)
+    ├── CardLifecycleTests.cs
+    ├── PositionManagementTests.cs
+    ├── BoardWorkflowTests.cs
+    └── UserIsolationTests.cs
+```
+
+### Implementation Order
+1. `InMemoryCardRepository` — foundation
+2. `KanbanApiFixture` — wires up the test server
+3. `CardLifecycleTests` — validates the fixture works
+4. `PositionManagementTests` — exercises complex business logic
+5. `BoardWorkflowTests` — aggregate endpoint
+6. `UserIsolationTests` — multi-tenancy
+
+### Running Integration Tests
+```bash
+dotnet test tests/api --filter "Namespace~Integration" --verbosity normal
+```
+
+All integration tests pass without Docker/Cosmos running. Existing tests remain green.
+
+## Phase 7: End-to-End Cosmos DB Tests
+
+### Context
+The Phase 6 integration tests swap Cosmos DB for an `InMemoryCardRepository`, so `CosmosCardRepository` (SQL queries, partition key routing, SDK serialization) is never exercised through HTTP. This phase adds a test class that hits the **real Cosmos DB emulator**, proving the full stack works from HTTP request to persisted document and back.
+
+### Approach
+Create a separate `CosmosApiFixture` that keeps the real Cosmos registrations from `Program.cs` intact. Tests are tagged with `[Trait("Category", "EndToEnd")]` so they can be excluded when the emulator isn't running.
+
+### New Files
+
+#### `tests/api/Helpers/CosmosApiFixture.cs`
+`WebApplicationFactory<Program>` subclass:
+- Keeps the real `CosmosClient`, `Container`, `CosmosCardRepository`, and `CardService` registrations
+- Sets environment to `"Development"` so the SSL bypass in `Program.cs` activates for the emulator's self-signed cert
+- Injects emulator connection string via `ConfigureAppConfiguration`
+- Uses a **dedicated test database** (`kanban-e2e-tests`) to avoid polluting the dev database
+- Implements `IAsyncLifetime` to delete the test database on teardown
+- Exposes `CreateClientForUser(userId)` helper
+
+#### `tests/api/Integration/EndToEndCosmosTests.cs`
+A focused test class with `[Trait("Category", "EndToEnd")]` covering a representative workflow:
+- **CRUD round-trip**: POST → GET → PUT → GET → DELETE → GET 404
+- **Position management**: Create 3 cards → verify positions → move → verify reorder
+- **Board state**: Move card to shipped → GET /api/board → verify completedAt is set
+- **User isolation**: Create as user A → GET as user B returns 404
+
+This is intentionally smaller than the in-memory tests — the goal is to verify the Cosmos SDK layer, not re-test all business logic.
+
+### Updated Test Structure
+```
+tests/api/
+├── Helpers/
+│   ├── CardTestFactory.cs
+│   ├── CosmosContainerMockBuilder.cs
+│   ├── InMemoryCardRepository.cs
+│   ├── KanbanApiFixture.cs
+│   └── CosmosApiFixture.cs            (NEW)
+├── Services/
+├── Endpoints/
+└── Integration/
+    ├── CardLifecycleTests.cs
+    ├── PositionManagementTests.cs
+    ├── BoardWorkflowTests.cs
+    ├── UserIsolationTests.cs
+    └── EndToEndCosmosTests.cs          (NEW)
+```
+
+### Key Design Decisions
+- **Separate fixture** rather than parameterising `KanbanApiFixture` — keeps the emulator-free tests completely independent
+- **Dedicated test database** (`kanban-e2e-tests`) — prevents interference with manual dev testing
+- **`IAsyncLifetime.DisposeAsync`** deletes the test database — automatic cleanup
+- **`[Trait("Category", "EndToEnd")]`** — `dotnet test` runs all tests by default; CI or quick local runs can exclude with `--filter "Category!=EndToEnd"`
+
+### Running
+```bash
+# All tests (requires emulator running)
+dotnet test tests/api
+
+# Exclude e2e tests (no emulator needed)
+dotnet test tests/api --filter "Category!=EndToEnd"
+
+# Only e2e tests
+dotnet test tests/api --filter "Category=EndToEnd"
+```
+
+### Verification
+1. Start Cosmos emulator: `bash src/api/start.sh` (or just the docker command)
+2. Run `dotnet test tests/api --filter "Category=EndToEnd" --verbosity normal` — all e2e tests pass
+3. Run `dotnet test tests/api --filter "Category!=EndToEnd"` — all other tests still pass without emulator
+
 ## Implementation Phases
 
 ### Phase 1: Project Scaffold
@@ -274,7 +433,7 @@ dotnet test --collect:"XPlat Code Coverage"
 2. Write tests for HTTP routing, status codes, request validation
 3. Write tests for user scoping (X-User-Id header, default user, ownership rejection)
 
-### Phase 6: Frontend Integration
+### Phase 6: Frontend Integration ⛔ NOT YET — do not implement until the API is fully working and tested
 1. Create `src/lib/api.ts` — fetch wrapper for all API endpoints
 2. Modify `boardStore.ts` to call the API instead of (or alongside) localStorage
 3. Remove localStorage persistence, replace with API calls
