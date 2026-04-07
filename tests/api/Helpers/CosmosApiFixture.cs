@@ -22,7 +22,7 @@ public class CosmosApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     /// This key is not a secret — it is the same for every emulator instance.
     /// </summary>
     private const string EmulatorConnectionString =
-        "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
+        "AccountEndpoint=http://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
 
     /// <summary>Dedicated database name used by e2e tests, separate from the dev database.</summary>
     private const string TestDatabaseName = "kanban-e2e-tests";

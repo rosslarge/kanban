@@ -2,8 +2,8 @@
 set -euo pipefail
 
 CONTAINER_NAME="cosmos-emulator"
-EMULATOR_URL="https://localhost:8081"
-HEALTH_ENDPOINT="${EMULATOR_URL}/_explorer/index.html"
+EMULATOR_URL="http://localhost:8081"
+HEALTH_ENDPOINT="${EMULATOR_URL}/"
 MAX_WAIT_SECONDS=120
 
 # ── Docker check ────────────────────────────────────────────────────────────
@@ -22,29 +22,19 @@ elif [ "$STATUS" = "exited" ] || [ "$STATUS" = "created" ]; then
   docker start "$CONTAINER_NAME"
 else
   echo "Creating and starting Cosmos emulator container..."
-  # Use the VNext emulator image which supports linux/arm64 (Apple Silicon)
-  ARCH=$(uname -m)
-  if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
-    # Run the x86_64 image under Rosetta via Docker Desktop on Apple Silicon
-    IMAGE="mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest"
-    PLATFORM_FLAG="--platform linux/amd64"
-  else
-    IMAGE="mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest"
-    PLATFORM_FLAG=""
-  fi
+  # The VNext preview emulator has native linux/arm64 support and uses plain HTTP
+  # on port 8081 (no self-signed cert), avoiding the Rosetta stability issues of
+  # the classic x86 emulator.
   docker run -d --name "$CONTAINER_NAME" \
-    $PLATFORM_FLAG \
+    -m 4g \
     -p 8081:8081 \
-    -p 10250-10255:10250-10255 \
-    -e AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE=true \
-    -e AZURE_COSMOS_EMULATOR_IP_ADDRESS_OVERRIDE=127.0.0.1 \
-    "$IMAGE"
+    mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
 fi
 
 # ── Wait for emulator to be ready ────────────────────────────────────────────
 echo "Waiting for Cosmos emulator to be ready (up to ${MAX_WAIT_SECONDS}s)..."
 ELAPSED=0
-until curl -sk --max-time 2 "$HEALTH_ENDPOINT" > /dev/null 2>&1; do
+until curl -s --max-time 2 "$HEALTH_ENDPOINT" > /dev/null 2>&1; do
   if [ "$ELAPSED" -ge "$MAX_WAIT_SECONDS" ]; then
     echo "Error: Cosmos emulator did not become ready within ${MAX_WAIT_SECONDS}s."
     exit 1
