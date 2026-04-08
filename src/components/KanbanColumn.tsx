@@ -14,9 +14,11 @@ import type { ColumnId } from '@/types'
 
 interface KanbanColumnProps {
   columnId: ColumnId
+  /** Zero-based position used to stagger the column reveal animation. */
+  index?: number
 }
 
-export function KanbanColumn({ columnId }: KanbanColumnProps) {
+export function KanbanColumn({ columnId, index = 0 }: KanbanColumnProps) {
   const [addOpen, setAddOpen] = useState(false)
   const config = COLUMN_CONFIG[columnId]
   const cards = useFilteredCards(columnId)
@@ -25,23 +27,49 @@ export function KanbanColumn({ columnId }: KanbanColumnProps) {
 
   const { setNodeRef, isOver } = useDroppable({ id: columnId, data: { type: 'column', columnId } })
 
+  const accent = `var(${config.accentVar})`
+
   return (
-    <div className="flex flex-col w-72 shrink-0">
+    <div
+      className="flex flex-col w-72 shrink-0 col-reveal"
+      style={{ '--col-i': index } as React.CSSProperties}
+    >
       {/* Column header */}
-      <div className={cn('flex items-center justify-between px-3 py-2.5 rounded-xl mb-2', config.headerBg, 'border-l-4', config.accent)}>
-        <div className="flex items-center gap-2">
-          <span className={cn('w-2.5 h-2.5 rounded-full', config.dotColor)} />
-          <span className="text-sm font-semibold text-gray-800">{config.title}</span>
-          <span className="text-xs text-gray-500 bg-white/70 rounded-full px-1.5 py-0.5 font-medium">
+      <div
+        className="glass-column flex items-center justify-between px-3 py-2.5 mb-2"
+        style={{ borderLeft: `3px solid ${accent}` }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
+          <span
+            className="text-sm font-medium tracking-wide truncate"
+            style={{
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontWeight: 500,
+              fontSize: '0.95rem',
+              color: 'var(--ink-primary)',
+            }}
+          >
+            {config.title}
+          </span>
+          <span
+            className="shrink-0 text-[11px] font-medium rounded-full px-1.5 py-0.5 leading-none"
+            style={{
+              fontFamily: "'Fira Code', monospace",
+              background: 'var(--border)',
+              color: 'var(--ink-faint)',
+            }}
+          >
             {totalCount}
           </span>
         </div>
         <button
           onClick={() => setAddOpen(true)}
-          className="w-6 h-6 rounded-md flex items-center justify-center text-gray-500 hover:bg-white/70 hover:text-gray-800 transition-colors cursor-pointer"
+          className="w-6 h-6 rounded-md flex items-center justify-center transition-colors cursor-pointer shrink-0"
+          style={{ color: 'var(--ink-faint)' }}
           title={`Add to ${config.title}`}
         >
-          <Plus size={14} />
+          <Plus size={13} />
         </button>
       </div>
 
@@ -50,7 +78,7 @@ export function KanbanColumn({ columnId }: KanbanColumnProps) {
         ref={setNodeRef}
         className={cn(
           'flex-1 rounded-xl p-2 space-y-2 min-h-32 transition-colors duration-150',
-          isOver ? 'bg-violet-50' : 'bg-transparent'
+          isOver && 'bg-white/[0.06]',
         )}
       >
         <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
@@ -66,7 +94,7 @@ export function KanbanColumn({ columnId }: KanbanColumnProps) {
       <Dialog open={addOpen} onOpenChange={(o) => !o && setAddOpen(false)}>
         <DialogContent title={`Add to ${config.title}`} description="Create a new card">
           <div className="px-6 pt-6 pb-2">
-            <h2 className="text-lg font-semibold text-gray-900">New card</h2>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink-primary)' }}>New card</h2>
           </div>
           <CardForm
             defaultColumnId={columnId}

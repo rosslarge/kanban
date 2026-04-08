@@ -16,6 +16,12 @@ interface CardDetailProps {
   onClose: () => void
 }
 
+/**
+ * Modal detail view for a single card. Supports inline editing and deletion.
+ * @param card - The card to display.
+ * @param open - Whether the dialog is visible.
+ * @param onClose - Callback to close the dialog.
+ */
 export function CardDetail({ card, open, onClose }: CardDetailProps) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -39,6 +45,7 @@ export function CardDetail({ card, open, onClose }: CardDetailProps) {
   }
 
   const colConfig = COLUMN_CONFIG[card.columnId]
+  const accent = `var(${colConfig.accentVar})`
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -46,7 +53,7 @@ export function CardDetail({ card, open, onClose }: CardDetailProps) {
         {editing ? (
           <>
             <div className="px-6 pt-6 pb-2">
-              <h2 className="text-lg font-semibold text-gray-900">Edit Card</h2>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--ink-primary)' }}>Edit Card</h2>
             </div>
             <CardForm
               initial={card}
@@ -59,21 +66,38 @@ export function CardDetail({ card, open, onClose }: CardDetailProps) {
           <div className="p-6">
             {/* Column pill */}
             <div className="flex items-center gap-2 mb-4">
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${colConfig.headerBg} text-gray-700`}>
-                <span className={`w-2 h-2 rounded-full ${colConfig.dotColor}`} />
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+                style={{
+                  background: `color-mix(in srgb, ${accent} 14%, transparent)`,
+                  color: 'var(--ink-muted)',
+                  border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
+                }}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ background: accent }} />
                 {colConfig.title}
               </span>
               <PriorityBadge priority={card.priority} />
             </div>
 
-            <h2 className="text-xl font-bold text-gray-900 mb-2">{card.title}</h2>
+            <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--ink-primary)' }}>{card.title}</h2>
 
             {card.category && (
-              <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-3">{card.category}</p>
+              <p
+                className="text-xs uppercase tracking-wide font-medium mb-3"
+                style={{
+                  fontFamily: "'Fira Code', monospace",
+                  color: 'var(--ink-faint)',
+                }}
+              >
+                {card.category}
+              </p>
             )}
 
             {card.description && (
-              <p className="text-sm text-gray-600 leading-relaxed mb-4 whitespace-pre-wrap">{card.description}</p>
+              <p className="text-sm leading-relaxed mb-4 whitespace-pre-wrap" style={{ color: 'var(--ink-muted)' }}>
+                {card.description}
+              </p>
             )}
 
             {card.tags.length > 0 && (
@@ -83,22 +107,41 @@ export function CardDetail({ card, open, onClose }: CardDetailProps) {
             )}
 
             {card.notes && (
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-4">
-                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1.5">Notes / Retrospective</p>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{card.notes}</p>
+              <div
+                className="rounded-xl p-4 mb-4"
+                style={{
+                  background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)',
+                }}
+              >
+                <p
+                  className="text-xs font-semibold uppercase tracking-wide mb-1.5"
+                  style={{ color: 'var(--accent)', fontFamily: "'Fira Code', monospace" }}
+                >
+                  Notes / Retrospective
+                </p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: 'var(--ink-muted)' }}>
+                  {card.notes}
+                </p>
               </div>
             )}
 
             {card.links.length > 0 && (
               <div className="space-y-1.5 mb-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Links</p>
+                <p
+                  className="text-xs font-semibold uppercase tracking-wide mb-2"
+                  style={{ fontFamily: "'Fira Code', monospace", color: 'var(--ink-faint)' }}
+                >
+                  Links
+                </p>
                 {card.links.map((link, i) => (
                   <a
                     key={i}
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-800 hover:underline"
+                    className="inline-flex items-center gap-1.5 text-sm hover:underline"
+                    style={{ color: 'var(--accent)' }}
                   >
                     <ExternalLink size={13} />
                     {link.label || link.url}
@@ -107,23 +150,29 @@ export function CardDetail({ card, open, onClose }: CardDetailProps) {
               </div>
             )}
 
-            <div className="flex items-center gap-4 text-xs text-gray-400 mt-4 pt-4 border-t border-gray-100">
+            <div
+              className="flex items-center gap-4 text-xs mt-4 pt-4"
+              style={{ borderTop: '1px solid var(--border)', color: 'var(--ink-faint)' }}
+            >
               <span>Created {format(new Date(card.createdAt), 'MMM d, yyyy')}</span>
               {card.completedAt && (
                 <span>Completed {format(new Date(card.completedAt), 'MMM d, yyyy')}</span>
               )}
             </div>
 
-            <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-100">
+            <div
+              className="flex items-center justify-between mt-5 pt-4"
+              style={{ borderTop: '1px solid var(--border)' }}
+            >
               {confirmDelete ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Delete this card?</span>
+                  <span className="text-sm" style={{ color: 'var(--ink-muted)' }}>Delete this card?</span>
                   <Button variant="destructive" size="sm" onClick={handleDelete}>Confirm</Button>
                   <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
                 </div>
               ) : (
                 <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)}>
-                  <Trash2 size={14} className="text-gray-400" /> Delete
+                  <Trash2 size={14} style={{ color: 'var(--ink-faint)' }} /> Delete
                 </Button>
               )}
               <Button variant="primary" size="sm" onClick={() => setEditing(true)}>

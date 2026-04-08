@@ -2,17 +2,23 @@ import { useEffect } from 'react'
 import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
 import { Board } from '@/components/Board'
+import { ThemeProvider } from '@/components/ThemeProvider'
+import { BackgroundAtmosphere } from '@/components/BackgroundAtmosphere'
 import { useBoardStore } from '@/store/boardStore'
+import { useMouseSpotlight } from '@/hooks/useMouseSpotlight'
 
-export default function App() {
+/**
+ * Inner shell — needs to be a child of ThemeProvider so useTheme works,
+ * and calls useMouseSpotlight to wire up the cursor-driven glow.
+ */
+function AppShell() {
   const initialize = useBoardStore((s) => s.initialize)
+  useMouseSpotlight()
 
-  useEffect(() => {
-    initialize()
-  }, [initialize])
+  useEffect(() => { initialize() }, [initialize])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="relative flex h-screen overflow-hidden z-10">
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header />
@@ -21,5 +27,14 @@ export default function App() {
         </main>
       </div>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <BackgroundAtmosphere />
+      <AppShell />
+    </ThemeProvider>
   )
 }
