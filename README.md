@@ -78,10 +78,10 @@ dotnet test
 
 All 49 tests run against mocked dependencies — no running Cosmos DB emulator is required.
 
-## Plans
+## Docs
 
-- [`docs/frontend-plan.md`](docs/frontend-plan.md) — Component design, state management approach, drag-and-drop strategy
-- [`docs/api-plan.md`](docs/api-plan.md) — API endpoints, Cosmos DB data model, position management, authentication design
+- [`docs/frontend-plan.md`](docs/frontend-plan.md) — Frontend architecture, component structure, state management
+- [`CLAUDE.md`](CLAUDE.md) — Architecture decisions, coding standards, and project context
 
 ## Coding Standards
 
