@@ -8,7 +8,7 @@ A personal kanban board for organising software projects and ideas. Cards move t
 
 The board is designed for a single developer to track their own projects — past work (outcomes, lessons learned) and future work (raw ideas through active development). The Retrospective column serves as an archive where completed projects accumulate notes.
 
-**Current state:** The frontend is fully built and works standalone using localStorage. The API is built and tested but not yet wired to the frontend — the frontend still reads/writes localStorage (`boardStore` with Zustand `persist`). Frontend–API integration is the next major phase (see `docs/frontend-plan.md`).
+**Current state:** Both the frontend and API are fully built and integrated. The frontend switches between localStorage and the HTTP API via `VITE_STORAGE_BACKEND` — `.env.local` sets this to `api` for local development.
 
 ## Commands
 
@@ -95,9 +95,13 @@ All plans must be created in the `/docs` folder (e.g. `docs/api-plan.md`). Do no
 
 ### Frontend
 
-**Stack:** React 19 + TypeScript + Vite · Tailwind CSS v4 · @dnd-kit · Zustand (`persist` to localStorage) · lucide-react
+**Stack:** React 19 + TypeScript + Vite · Tailwind CSS v4 · @dnd-kit · Zustand · lucide-react
 
-**State:** `boardStore` owns cards and columns (normalised: `Record<string, Card>` + per-column `cardIds[]`). `filterStore` owns the search query and active tag/priority filters. `useFilteredCards(columnId)` derives the visible card list for a column by joining both stores.
+**Environment:** `VITE_STORAGE_BACKEND=api|local` switches the storage backend. `.env.local` (gitignored) sets this to `api` for local dev. `VITE_API_BASE_URL` sets the API base URL (defaults to `http://localhost:5029` in `src/config.ts` — currently hardcoded, not reading the env var).
+
+**State:** `boardStore` owns cards and columns (normalised: `Record<string, Card>` + per-column `cardIds[]`). `filterStore` owns the search query and active tag/priority filters. `useFilteredCards(columnId)` derives the visible card list for a column by joining both stores. In API mode the Zustand `persist` middleware is omitted — the API is the source of truth. In local mode `persist` serialises to localStorage under `"kanban-board-v1"`.
+
+**Storage adapter:** `src/services/storage/` contains a `StorageAdapter` interface with `localAdapter` and `apiAdapter` implementations, selected once at module load in `src/services/storage/index.ts`. `boardStore` imports `storageAdapter` and calls it for all persistence — it never calls `apiClient` directly. All API mode mutations in `boardStore` are optimistic: state is updated immediately, then rolled back if the API call fails.
 
 **Drag & drop:** `Board.tsx` wraps everything in `DndContext`. Each `KanbanColumn` is a `useDroppable`. Each `KanbanCard` is a `useSortable`. `DragOverlay` renders the ghost card during a drag. Cross-column moves fire in `onDragOver`; same-column reorders fire in `onDragEnd`.
 
