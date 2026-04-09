@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ExternalLink } from 'lucide-react'
+import { Check, ExternalLink, Trash2, X } from 'lucide-react'
 import { PriorityBadge } from '@/components/PriorityBadge'
 import { TagBadge } from '@/components/TagBadge'
 import { CardDetail } from '@/components/CardDetail'
+import { useBoardStore } from '@/store/boardStore'
 import { cn } from '@/lib/utils'
 import type { Card } from '@/types'
 
@@ -24,7 +25,21 @@ interface KanbanCardProps {
  */
 export function KanbanCard({ card, isDragOverlay = false }: KanbanCardProps) {
   const [open, setOpen] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const glassRef = useRef<HTMLDivElement>(null)
+  const deleteCard = useBoardStore((s) => s.deleteCard)
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation()
+    setIsDeleting(true)
+    try {
+      await deleteCard(card.id)
+    } catch {
+      setIsDeleting(false)
+      setConfirmingDelete(false)
+    }
+  }
 
   const {
     attributes,
@@ -66,17 +81,18 @@ export function KanbanCard({ card, isDragOverlay = false }: KanbanCardProps) {
         ref={isDragOverlay ? undefined : setNodeRef}
         style={isDragOverlay ? undefined : dndStyle}
         className={cn(
+          'group',
           isDragging && 'opacity-30',
           isDragOverlay && 'rotate-1 scale-[1.03] cursor-grabbing',
           !isDragOverlay && 'cursor-pointer',
         )}
-        onClick={() => !isDragOverlay && setOpen(true)}
+        onClick={() => !isDragOverlay && !confirmingDelete && setOpen(true)}
         {...(isDragOverlay ? {} : { ...attributes, ...listeners })}
       >
         {/* Inner glass surface — owns the tilt transform */}
         <div
           ref={glassRef}
-          className="glass-card p-3.5"
+          className="glass-card p-3.5 relative"
           style={{ transition: 'transform 120ms ease-out' }}
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
@@ -136,6 +152,46 @@ export function KanbanCard({ card, isDragOverlay = false }: KanbanCardProps) {
               </span>
             )}
           </div>
+
+          {/* Delete controls — trash on hover, tick/cross when confirming */}
+          {!isDragOverlay && (
+            <div
+              className="absolute top-2 right-1.5 flex items-center gap-0.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {confirmingDelete ? (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmingDelete(false) }}
+                    disabled={isDeleting}
+                    className="rounded p-1 cursor-pointer transition-colors disabled:opacity-50"
+                    style={{ color: 'var(--ink-faint)' }}
+                    title="Cancel"
+                  >
+                    <X size={13} />
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="rounded p-1 cursor-pointer transition-colors disabled:opacity-50"
+                    style={{ color: 'rgba(220, 53, 69, 0.85)' }}
+                    title="Confirm delete"
+                  >
+                    <Check size={13} />
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="opacity-0 group-hover:opacity-100 transition-opacity rounded p-1 cursor-pointer"
+                  style={{ color: 'var(--ink-faint)' }}
+                  onClick={(e) => { e.stopPropagation(); setConfirmingDelete(true) }}
+                  title="Delete card"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

@@ -101,7 +101,10 @@ export function Header() {
             <h2 className="text-lg font-semibold" style={{ color: 'var(--ink-primary)' }}>New card</h2>
           </div>
           <CardForm
-            onSubmit={(data) => { addCard(data); setAddOpen(false) }}
+            onSubmit={async (data) => {
+              try { await addCard(data); setAddOpen(false) }
+              catch { /* error toast shown by store; keep dialog open for retry */ }
+            }}
             onCancel={() => setAddOpen(false)}
             submitLabel="Create card"
           />

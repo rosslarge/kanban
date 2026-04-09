@@ -20,12 +20,13 @@ interface CardFormProps {
     links: CardLink[]
     notes: string
     columnId: ColumnId
-  }) => void
+  }) => Promise<void>
   onCancel: () => void
   submitLabel?: string
 }
 
 export function CardForm({ initial, defaultColumnId = 'ideas', onSubmit, onCancel, submitLabel = 'Create' }: CardFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
@@ -60,10 +61,15 @@ export function CardForm({ initial, defaultColumnId = 'ideas', onSubmit, onCance
     setLinks((prev) => prev.filter((_, idx) => idx !== i))
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
-    onSubmit({ title: title.trim(), description, tags, priority, category, links: links.filter((l) => l.url), notes, columnId })
+    setIsSubmitting(true)
+    try {
+      await onSubmit({ title: title.trim(), description, tags, priority, category, links: links.filter((l) => l.url), notes, columnId })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const columnOptions = COLUMN_ORDER.map((id) => ({ value: id, label: COLUMN_CONFIG[id].title }))
@@ -205,13 +211,18 @@ export function CardForm({ initial, defaultColumnId = 'ideas', onSubmit, onCance
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
-        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+      <div
+        className="flex items-center justify-end gap-2 pt-2"
+        style={{ borderTop: '1px solid var(--border)' }}
+      >
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>Cancel</Button>
         <button
           type="submit"
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-4 py-2 text-sm font-medium hover:from-violet-700 hover:to-indigo-700 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+          disabled={isSubmitting}
+          className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-60 disabled:cursor-not-allowed"
+          style={{ background: 'var(--accent)' }}
         >
-          {submitLabel}
+          {isSubmitting ? 'Saving…' : submitLabel}
         </button>
       </div>
     </form>

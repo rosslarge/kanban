@@ -98,7 +98,10 @@ export function KanbanColumn({ columnId, index = 0 }: KanbanColumnProps) {
           </div>
           <CardForm
             defaultColumnId={columnId}
-            onSubmit={(data) => { addCard(data); setAddOpen(false) }}
+            onSubmit={async (data) => {
+              try { await addCard(data); setAddOpen(false) }
+              catch { /* error toast shown by store; keep dialog open for retry */ }
+            }}
             onCancel={() => setAddOpen(false)}
             submitLabel="Create card"
           />

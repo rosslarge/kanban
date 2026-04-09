@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Toaster } from 'sonner'
 import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
 import { Board } from '@/components/Board'
@@ -15,7 +16,7 @@ function AppShell() {
   const initialize = useBoardStore((s) => s.initialize)
   useMouseSpotlight()
 
-  useEffect(() => { initialize() }, [initialize])
+  useEffect(() => { void initialize() }, [initialize])
 
   return (
     <div className="relative flex h-screen overflow-hidden z-10">
@@ -35,6 +36,7 @@ export default function App() {
     <ThemeProvider>
       <BackgroundAtmosphere />
       <AppShell />
+      <Toaster position="top-right" />
     </ThemeProvider>
   )
 }
