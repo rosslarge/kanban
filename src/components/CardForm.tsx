@@ -20,7 +20,7 @@ interface CardFormProps {
     links: CardLink[]
     notes: string
     columnId: ColumnId
-  }) => void
+  }) => Promise<void>
   onCancel: () => void
   submitLabel?: string
 }
@@ -35,6 +35,7 @@ export function CardForm({ initial, defaultColumnId = 'ideas', onSubmit, onCance
   const [links, setLinks] = useState<CardLink[]>(initial?.links ?? [])
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [columnId, setColumnId] = useState<ColumnId>(initial?.columnId ?? defaultColumnId)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   function toggleTag(tag: string) {
     setTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])
@@ -60,10 +61,15 @@ export function CardForm({ initial, defaultColumnId = 'ideas', onSubmit, onCance
     setLinks((prev) => prev.filter((_, idx) => idx !== i))
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
-    onSubmit({ title: title.trim(), description, tags, priority, category, links: links.filter((l) => l.url), notes, columnId })
+    setIsSubmitting(true)
+    try {
+      await onSubmit({ title: title.trim(), description, tags, priority, category, links: links.filter((l) => l.url), notes, columnId })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const columnOptions = COLUMN_ORDER.map((id) => ({ value: id, label: COLUMN_CONFIG[id].title }))
@@ -209,9 +215,10 @@ export function CardForm({ initial, defaultColumnId = 'ideas', onSubmit, onCance
         <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
         <button
           type="submit"
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-4 py-2 text-sm font-medium hover:from-violet-700 hover:to-indigo-700 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+          disabled={isSubmitting}
+          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-4 py-2 text-sm font-medium hover:from-violet-700 hover:to-indigo-700 transition-all shadow-sm cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {submitLabel}
+          {isSubmitting ? 'Saving...' : submitLabel}
         </button>
       </div>
     </form>

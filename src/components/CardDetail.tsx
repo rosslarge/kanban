@@ -24,18 +24,26 @@ export function CardDetail({ card, open, onClose }: CardDetailProps) {
   const moveCard = useBoardStore((s) => s.moveCard)
   const columns = useBoardStore((s) => s.columns)
 
-  function handleUpdate(data: Parameters<typeof updateCard>[1] & { columnId?: Card['columnId'] }) {
+  async function handleUpdate(data: Parameters<typeof updateCard>[1] & { columnId?: Card['columnId'] }) {
     const { columnId: newColumnId, ...rest } = data as typeof data & { columnId: Card['columnId'] }
-    updateCard(card.id, rest)
-    if (newColumnId && newColumnId !== card.columnId) {
-      moveCard(card.id, newColumnId, columns[newColumnId].cardIds.length)
+    try {
+      await updateCard(card.id, rest)
+      if (newColumnId && newColumnId !== card.columnId) {
+        await moveCard(card.id, newColumnId, columns[newColumnId].cardIds.length)
+      }
+      setEditing(false)
+    } catch {
+      // Error toast shown by the store; keep edit form open so the user can retry
     }
-    setEditing(false)
   }
 
-  function handleDelete() {
-    deleteCard(card.id)
-    onClose()
+  async function handleDelete() {
+    try {
+      await deleteCard(card.id)
+      onClose()
+    } catch {
+      // Error toast shown by the store; keep dialog open
+    }
   }
 
   const colConfig = COLUMN_CONFIG[card.columnId]
@@ -50,7 +58,7 @@ export function CardDetail({ card, open, onClose }: CardDetailProps) {
             </div>
             <CardForm
               initial={card}
-              onSubmit={(data) => handleUpdate(data)}
+              onSubmit={async (data) => handleUpdate(data)}
               onCancel={() => setEditing(false)}
               submitLabel="Save changes"
             />

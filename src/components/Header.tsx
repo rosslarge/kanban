@@ -59,7 +59,14 @@ export function Header() {
             <h2 className="text-lg font-semibold text-gray-900">New card</h2>
           </div>
           <CardForm
-            onSubmit={(data) => { addCard(data); setAddOpen(false) }}
+            onSubmit={async (data) => {
+              try {
+                await addCard(data)
+                setAddOpen(false)
+              } catch {
+                // Error toast shown by the store; keep dialog open so the user can retry
+              }
+            }}
             onCancel={() => setAddOpen(false)}
             submitLabel="Create card"
           />

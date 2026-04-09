@@ -60,7 +60,7 @@ export function Board() {
     const overIndex = toCardIds.indexOf(overId)
     const insertIndex = overIndex >= 0 ? overIndex : toCardIds.length
 
-    moveCard(activeId, toCol, insertIndex)
+    void moveCard(activeId, toCol, insertIndex)
   }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
@@ -78,7 +78,7 @@ export function Board() {
     const fromIndex = cardIds.indexOf(activeId)
     const toIndex = cardIds.indexOf(overId)
     if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
-      reorderCard(col, fromIndex, toIndex)
+      void reorderCard(col, fromIndex, toIndex)
     }
   }
 
