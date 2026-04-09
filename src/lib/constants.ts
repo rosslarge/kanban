@@ -8,37 +8,12 @@ export const COLUMN_ORDER: ColumnId[] = [
   'retrospective',
 ]
 
-export const COLUMN_CONFIG: Record<ColumnId, { title: string; accent: string; headerBg: string; dotColor: string }> = {
-  ideas: {
-    title: 'Ideas',
-    accent: 'border-blue-400',
-    headerBg: 'bg-blue-50',
-    dotColor: 'bg-blue-400',
-  },
-  planned: {
-    title: 'Planned',
-    accent: 'border-amber-400',
-    headerBg: 'bg-amber-50',
-    dotColor: 'bg-amber-400',
-  },
-  'in-progress': {
-    title: 'In Progress',
-    accent: 'border-emerald-400',
-    headerBg: 'bg-emerald-50',
-    dotColor: 'bg-emerald-400',
-  },
-  shipped: {
-    title: 'Shipped',
-    accent: 'border-violet-400',
-    headerBg: 'bg-violet-50',
-    dotColor: 'bg-violet-400',
-  },
-  retrospective: {
-    title: 'Retrospective',
-    accent: 'border-gray-400',
-    headerBg: 'bg-gray-50',
-    dotColor: 'bg-gray-400',
-  },
+export const COLUMN_CONFIG: Record<ColumnId, { title: string; accentVar: string }> = {
+  ideas:         { title: 'Ideas',         accentVar: '--col-ideas' },
+  planned:       { title: 'Planned',       accentVar: '--col-planned' },
+  'in-progress': { title: 'In Progress',   accentVar: '--col-inprogress' },
+  shipped:       { title: 'Shipped',       accentVar: '--col-shipped' },
+  retrospective: { title: 'Retrospective', accentVar: '--col-retro' },
 }
 
 export const PRIORITY_CONFIG: Record<Priority, { label: string; classes: string; dot: string }> = {

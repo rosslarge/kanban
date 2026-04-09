@@ -91,8 +91,8 @@ export function Board() {
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-4 px-6 pb-8 overflow-x-auto min-h-0 flex-1">
-        {COLUMN_ORDER.map((colId) => (
-          <KanbanColumn key={colId} columnId={colId} />
+        {COLUMN_ORDER.map((colId, i) => (
+          <KanbanColumn key={colId} columnId={colId} index={i} />
         ))}
       </div>
       <BoardDragOverlay activeCard={activeCard} />

@@ -8,6 +8,11 @@ import type { Priority } from '@/types'
 
 const PRIORITIES: Priority[] = ['high', 'medium', 'low']
 
+/**
+ * Left-hand navigation sidebar. Contains the board branding, priority filter
+ * buttons, and tag filter pills. Uses the glass sidebar token so it blends
+ * with the background atmosphere in both themes.
+ */
 export function Sidebar() {
   const { activeTags, activePriorities, toggleTag, togglePriority, clearFilters } = useFilterStore()
   const allTags = useAllTags()
@@ -15,15 +20,38 @@ export function Sidebar() {
   const hasFilters = activeTags.length > 0 || activePriorities.length > 0
 
   return (
-    <aside className="w-56 shrink-0 flex flex-col bg-white border-r border-gray-100 h-full overflow-y-auto">
+    <aside
+      className="w-56 shrink-0 flex flex-col h-full overflow-y-auto"
+      style={{
+        background: 'var(--bg-sidebar)',
+        borderRight: '1px solid var(--border)',
+        backdropFilter: 'blur(12px)',
+      }}
+    >
       {/* Branding */}
-      <div className="flex items-center gap-2.5 px-4 py-5 border-b border-gray-100">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-sm">
-          <LayoutGrid size={16} className="text-white" />
+      <div
+        className="flex items-center gap-2.5 px-4 py-5"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm shrink-0"
+          style={{ background: 'var(--accent)' }}
+        >
+          <LayoutGrid size={15} style={{ color: '#fff' }} />
         </div>
         <div>
-          <p className="text-sm font-bold text-gray-900 leading-tight">Kanban</p>
-          <p className="text-[11px] text-gray-400">Project Board</p>
+          <p
+            className="text-sm font-bold leading-tight"
+            style={{
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontWeight: 600,
+              fontSize: '1rem',
+              color: 'var(--ink-primary)',
+            }}
+          >
+            Kanban
+          </p>
+          <p className="text-[11px]" style={{ color: 'var(--ink-faint)' }}>Project Board</p>
         </div>
       </div>
 
@@ -31,20 +59,31 @@ export function Sidebar() {
         {/* Priority filter */}
         <div>
           <div className="flex items-center gap-1.5 px-1 mb-2">
-            <Filter size={12} className="text-gray-400" />
-            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Priority</span>
+            <Filter size={11} style={{ color: 'var(--ink-faint)' }} />
+            <span
+              className="text-[10px] font-semibold uppercase tracking-widest"
+              style={{
+                fontFamily: "'Fira Code', monospace",
+                color: 'var(--ink-faint)',
+              }}
+            >
+              Priority
+            </span>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {PRIORITIES.map((p) => (
               <button
                 key={p}
                 onClick={() => togglePriority(p)}
                 className={cn(
                   'w-full flex items-center px-2 py-1.5 rounded-lg text-sm transition-colors cursor-pointer',
-                  activePriorities.includes(p)
-                    ? 'bg-violet-50 text-violet-700'
-                    : 'text-gray-600 hover:bg-gray-50'
                 )}
+                style={{
+                  background: activePriorities.includes(p)
+                    ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+                    : 'transparent',
+                  color: 'var(--ink-muted)',
+                }}
               >
                 <PriorityBadge priority={p} />
               </button>
@@ -56,8 +95,16 @@ export function Sidebar() {
         {allTags.length > 0 && (
           <div>
             <div className="flex items-center gap-1.5 px-1 mb-2">
-              <Tag size={12} className="text-gray-400" />
-              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Tags</span>
+              <Tag size={11} style={{ color: 'var(--ink-faint)' }} />
+              <span
+                className="text-[10px] font-semibold uppercase tracking-widest"
+                style={{
+                  fontFamily: "'Fira Code', monospace",
+                  color: 'var(--ink-faint)',
+                }}
+              >
+                Tags
+              </span>
             </div>
             <div className="flex flex-wrap gap-1.5 px-1">
               {allTags.map((tag) => (
@@ -75,10 +122,11 @@ export function Sidebar() {
 
       {/* Clear filters */}
       {hasFilters && (
-        <div className="px-3 py-3 border-t border-gray-100">
+        <div className="px-3 py-3" style={{ borderTop: '1px solid var(--border)' }}>
           <button
             onClick={clearFilters}
-            className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 py-1.5 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg transition-colors cursor-pointer"
+            style={{ color: 'var(--ink-faint)' }}
           >
             <X size={12} />
             Clear filters
