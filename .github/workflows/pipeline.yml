@@ -46,4 +46,12 @@ jobs:
         run: dotnet build src/api/
 
       - name: Run tests (excluding E2E Cosmos tests)
-        run: dotnet test tests/api/ --filter "Category!=EndToEnd" --logger "console;verbosity=normal"
+        run: dotnet test tests/api/ --filter "Category!=EndToEnd" --logger "trx;LogFileName=test-results.trx"
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: API Tests
+          path: tests/api/TestResults/*.trx
+          reporter: dotnet-trx
