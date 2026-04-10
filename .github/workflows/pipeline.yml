@@ -7,7 +7,7 @@ on:
 jobs:
   # ── Frontend ──────────────────────────────────────────────────────────────
   frontend:
-    name: Frontend — build
+    name: Frontend — build & test
     runs-on: ubuntu-latest
     permissions:
       checks: write
