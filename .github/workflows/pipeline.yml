@@ -7,8 +7,11 @@ on:
 jobs:
   # ── Frontend ──────────────────────────────────────────────────────────────
   frontend:
-    name: Frontend — build
+    name: Frontend — build & test
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +26,17 @@ jobs:
 
       - name: Type-check
         run: npx tsc --noEmit
+
+      - name: Run UI tests
+        run: npm run test:run -- --reporter=junit --outputFile=tests/ui/test-results.xml
+
+      - name: Publish UI test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: UI Tests
+          path: tests/ui/test-results.xml
+          reporter: jest-junit
 
       - name: Build
         run: npm run build
