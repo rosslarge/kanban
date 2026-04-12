@@ -2,7 +2,7 @@ name: CI / Deploy
 
 on:
   push:
-    branches: [deploy-proto, main]
+    branches: [main]
   pull_request:
 
 env:
