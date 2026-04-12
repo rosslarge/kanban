@@ -1,11 +1,12 @@
-name: Deploy
+name: CI / Deploy
 
 on:
   push:
     branches: [deploy-proto, main]
+  pull_request:
 
 jobs:
-  # ── Run the CI pipeline first ────────────────────────────────────────────
+  # ── Run the CI pipeline ──────────────────────────────────────────────────
   ci:
     name: CI
     uses: ./.github/workflows/pipeline.yml
@@ -16,6 +17,7 @@ jobs:
   # ── Build and push the API container image ───────────────────────────────
   build-image:
     name: Build & push API image
+    if: github.event_name == 'push'
     needs: ci
     runs-on: ubuntu-latest
     permissions:
@@ -50,6 +52,7 @@ jobs:
   # ── Deploy API to staging ────────────────────────────────────────────────
   deploy-api-staging:
     name: Deploy API — staging
+    if: github.event_name == 'push'
     needs: build-image
     runs-on: ubuntu-latest
     environment: staging
@@ -74,6 +77,7 @@ jobs:
   # ── Deploy frontend to staging ───────────────────────────────────────────
   deploy-web-staging:
     name: Deploy frontend — staging
+    if: github.event_name == 'push'
     needs: [build-image, deploy-api-staging]
     runs-on: ubuntu-latest
     environment: staging
@@ -109,7 +113,7 @@ jobs:
   # ── Deploy API to production (main only, manual approval) ────────────────
   deploy-api-prod:
     name: Deploy API — production
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [build-image, deploy-web-staging]
     runs-on: ubuntu-latest
     environment: production
@@ -134,7 +138,7 @@ jobs:
   # ── Deploy frontend to production (main only) ───────────────────────────
   deploy-web-prod:
     name: Deploy frontend — production
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [build-image, deploy-api-prod]
     runs-on: ubuntu-latest
     environment: production
