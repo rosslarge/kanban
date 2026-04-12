@@ -115,10 +115,18 @@ resource "azurerm_key_vault" "main" {
   purge_protection_enabled   = false
 }
 
-# Grant the principal running Terraform the ability to write secrets, so the
-# env layer can populate cosmos-connection-staging / cosmos-connection-prod.
+# Grant the human operator Key Vault Secrets Officer so they can manage
+# secrets from the portal or CLI.
 resource "azurerm_role_assignment" "operator_kv_secrets_officer" {
   scope                = azurerm_key_vault.main.id
   role_definition_name = "Key Vault Secrets Officer"
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_id         = var.operator_principal_id
+}
+
+# Grant the CI/CD managed identity Key Vault Secrets Officer so the env
+# layer Terraform can create/update cosmos-connection-{env} secrets.
+resource "azurerm_role_assignment" "cicd_kv_secrets_officer" {
+  scope                = azurerm_key_vault.main.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = var.cicd_principal_id
 }
