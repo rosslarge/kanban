@@ -10,10 +10,17 @@ env:
   TF_STATE_CONTAINER: tfstate
 
 jobs:
-  # ── Run the CI pipeline ──────────────────────────────────────────────────
+  # ── Run CI + E2E ─────────────────────────────────────────────────────────
   ci:
     name: CI
-    uses: ./.github/workflows/pipeline.yml
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      checks: write
+      contents: read
+
+  e2e:
+    name: E2E Cosmos
+    uses: ./.github/workflows/e2e.yml
     permissions:
       checks: write
       contents: read
@@ -21,8 +28,7 @@ jobs:
   # ── Terraform — shared layer ─────────────────────────────────────────────
   terraform-shared:
     name: Terraform — shared
-    if: github.event_name == 'push'
-    needs: ci
+    needs: [ci, e2e]
     runs-on: ubuntu-latest
     environment: staging
     permissions:
@@ -82,7 +88,6 @@ jobs:
   # ── Build and push the API container image ───────────────────────────────
   build-image:
     name: Build & push API image
-    if: github.event_name == 'push'
     needs: ci
     runs-on: ubuntu-latest
     permissions:
@@ -117,7 +122,6 @@ jobs:
   # ── Deploy API to staging ────────────────────────────────────────────────
   deploy-api-staging:
     name: Deploy API — staging
-    if: github.event_name == 'push'
     needs: [build-image, terraform-staging]
     runs-on: ubuntu-latest
     environment: staging
@@ -142,7 +146,6 @@ jobs:
   # ── Deploy frontend to staging ───────────────────────────────────────────
   deploy-web-staging:
     name: Deploy frontend — staging
-    if: github.event_name == 'push'
     needs: [build-image, deploy-api-staging]
     runs-on: ubuntu-latest
     environment: staging
@@ -178,7 +181,7 @@ jobs:
   # ── Terraform — production environment (main only) ───────────────────────
   terraform-prod:
     name: Terraform — production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: [terraform-shared, deploy-web-staging]
     runs-on: ubuntu-latest
     environment: production
@@ -209,7 +212,7 @@ jobs:
   # ── Deploy API to production (main only, manual approval) ────────────────
   deploy-api-prod:
     name: Deploy API — production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: [build-image, terraform-prod]
     runs-on: ubuntu-latest
     environment: production
@@ -234,7 +237,7 @@ jobs:
   # ── Deploy frontend to production (main only) ───────────────────────────
   deploy-web-prod:
     name: Deploy frontend — production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: [build-image, deploy-api-prod]
     runs-on: ubuntu-latest
     environment: production
