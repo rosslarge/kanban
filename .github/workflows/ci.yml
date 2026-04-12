@@ -1,0 +1,75 @@
+name: Build & Verification
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  frontend:
+    name: Frontend — build & test
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Run UI tests
+        run: npm run test:run -- --reporter=junit --outputFile=tests/ui/test-results.xml
+
+      - name: Publish UI test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: UI Tests
+          path: tests/ui/test-results.xml
+          reporter: jest-junit
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_STORAGE_BACKEND: api
+          VITE_API_BASE_URL: http://localhost:5062
+
+  api:
+    name: API — build & test
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Build API
+        run: dotnet build src/api/
+
+      - name: Run tests (excluding E2E Cosmos tests)
+        run: dotnet test tests/api/ --filter "Category!=EndToEnd" --logger "trx;LogFileName=test-results.trx"
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: API Tests
+          path: tests/api/TestResults/*.trx
+          reporter: dotnet-trx

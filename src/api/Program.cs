@@ -1,6 +1,7 @@
 using Kanban.Api.Configuration;
 using Kanban.Api.Endpoints;
 using Kanban.Api.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Azure.Cosmos;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -43,13 +44,27 @@ builder.Services.AddSingleton(sp =>
 builder.Services.AddSingleton<ICardRepository, CosmosCardRepository>();
 builder.Services.AddSingleton<ICardService, CardService>();
 
-// CORS — allow the Vite dev server
+// CORS — allowed origins are read from configuration so each environment
+// (local dev, staging, prod) can permit its own frontend host without code changes.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod());
+});
+
+// Trust X-Forwarded-* headers from the upstream proxy (e.g. Azure Container Apps ingress)
+// so HttpContext.Request.Scheme reflects the original https scheme rather than the
+// internal http hop. KnownNetworks/KnownProxies are cleared because the ingress IP is
+// not predictable; this is safe because Container Apps is the only thing in front of us.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
 });
 
 builder.Services.AddOpenApi();
@@ -67,6 +82,8 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.UseForwardedHeaders();
+
 // Middleware: resolve user from header (swaps to JWT claims when auth is added)
 app.Use(async (context, next) =>
 {
@@ -82,7 +99,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
-app.UseHttpsRedirection();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.MapCardEndpoints();
 

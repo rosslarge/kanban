@@ -8,7 +8,7 @@ export const config = {
   /** Which storage backend to use: 'local' (localStorage) or 'api' (HTTP API). */
   storageBackend: backend as 'local' | 'api',
   /** Base URL for the API (used only when storageBackend === 'api'). */
-  apiBaseUrl: 'http://localhost:5029',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5029',
   /** User ID header value sent with every API request. */
   apiUserId: 'dev-user',
 } as const
