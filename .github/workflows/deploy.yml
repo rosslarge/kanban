@@ -1,9 +1,8 @@
-name: CI / Deploy
+name: Deploy
 
 on:
   push:
     branches: [main]
-  pull_request:
 
 env:
   TF_STATE_RG: kanban-shared-rg
