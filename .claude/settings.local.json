@@ -12,7 +12,8 @@
       "Bash(docker stop:*)",
       "Bash(terraform init:*)",
       "Bash(terraform plan:*)",
-      "Bash(terraform import:*)"
+      "Bash(terraform import:*)",
+      "Bash(az identity:*)"
     ]
   }
 }

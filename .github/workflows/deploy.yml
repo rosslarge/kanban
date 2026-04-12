@@ -1,0 +1,168 @@
+name: Deploy
+
+on:
+  push:
+    branches: [deploy-proto, main]
+
+jobs:
+  # ── Run the CI pipeline first ────────────────────────────────────────────
+  ci:
+    name: CI
+    uses: ./.github/workflows/pipeline.yml
+    permissions:
+      checks: write
+      contents: read
+
+  # ── Build and push the API container image ───────────────────────────────
+  build-image:
+    name: Build & push API image
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/kanban-api
+          tags: |
+            type=sha,prefix=
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: src/api
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          platforms: linux/amd64
+
+  # ── Deploy API to staging ────────────────────────────────────────────────
+  deploy-api-staging:
+    name: Deploy API — staging
+    needs: build-image
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Container App
+        run: |
+          az containerapp update \
+            --name ${{ vars.CONTAINER_APP_NAME }} \
+            --resource-group ${{ vars.RESOURCE_GROUP }} \
+            --image ${{ needs.build-image.outputs.image-tag }}
+
+  # ── Deploy frontend to staging ───────────────────────────────────────────
+  deploy-web-staging:
+    name: Deploy frontend — staging
+    needs: [build-image, deploy-api-staging]
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_STORAGE_BACKEND: api
+          VITE_API_BASE_URL: ${{ vars.API_URL }}
+
+      - name: Deploy to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.SWA_DEPLOYMENT_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: dist
+          skip_app_build: true
+          skip_api_build: true
+
+  # ── Deploy API to production (main only, manual approval) ────────────────
+  deploy-api-prod:
+    name: Deploy API — production
+    if: github.ref == 'refs/heads/main'
+    needs: [build-image, deploy-web-staging]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Container App
+        run: |
+          az containerapp update \
+            --name ${{ vars.CONTAINER_APP_NAME }} \
+            --resource-group ${{ vars.RESOURCE_GROUP }} \
+            --image ${{ needs.build-image.outputs.image-tag }}
+
+  # ── Deploy frontend to production (main only) ───────────────────────────
+  deploy-web-prod:
+    name: Deploy frontend — production
+    if: github.ref == 'refs/heads/main'
+    needs: [build-image, deploy-api-prod]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_STORAGE_BACKEND: api
+          VITE_API_BASE_URL: ${{ vars.API_URL }}
+
+      - name: Deploy to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.SWA_DEPLOYMENT_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: dist
+          skip_app_build: true
+          skip_api_build: true
