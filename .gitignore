@@ -34,3 +34,11 @@ yarn-error.log*
 # dotnet
 bin/
 obj/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
