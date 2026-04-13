@@ -1,2 +1,2 @@
 environment    = "prod"
-allowed_origin = "" # Set after the first apply: terraform output -raw static_web_app_url
+allowed_origin = "https://jolly-water-05af5ec03.7.azurestaticapps.net"
